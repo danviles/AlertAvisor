@@ -3,7 +3,7 @@ import { useState } from "react";
 import ManagerComponent from "./components/manager/index";
 
 function App() {
-  const [email, setEmail] = useState("danviles92@gmail.com");
+  const [email, setEmail] = useState("");
 
   return (
     <section className="">
