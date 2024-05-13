@@ -9,15 +9,22 @@ import ErrorIcon from "@mui/icons-material/Error";
 import Button from "@mui/material/Button";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
-import InputLabel from "@mui/material/InputLabel";
 import { useState } from "react";
 import TransactionList from "./transactions";
+import emailjs from "@emailjs/browser";
 import { genId } from "../../helpers/genId";
 import { format } from "date-fns";
+import { useEffect } from "react";
 
-const ManagerComponent = ({ email }) => {
-  const [mountAlertValue, setMountAlertValue] = useState(400);
-  const [accountCountAlertValue, setAccountCountAlertValue] = useState(20);
+const ManagerComponent = ({ email, setEmail }) => {
+  const [mountAlertValue, setMountAlertValue] = useState(() => {
+    const storedValue = localStorage.getItem("mountAlertValue");
+    return storedValue ? JSON.parse(storedValue) : 400;
+  });
+  const [accountCountAlertValue, setAccountCountAlertValue] = useState(() => {
+    const storedValue = localStorage.getItem("accountCountAlertValue");
+    return storedValue ? JSON.parse(storedValue) : 20;
+  });
   const [blackListValue, setBlackListValue] = useState("");
 
   const [cuenta, setCuenta] = useState("");
@@ -26,9 +33,24 @@ const ManagerComponent = ({ email }) => {
   const [tipo, setTipo] = useState("");
   const [monto, setMonto] = useState(0);
 
-  const [blackList, setBlackList] = useState([]);
-  const [transactions, setTransactions] = useState({});
-  const [alerts, setAlerts] = useState([]);
+  const [cuentaEnvia, setCuentaEnvia] = useState("");
+  const [nombreEnvia, setNombreEnvia] = useState("");
+  const [cedulaEnvia, setCedulaEnvia] = useState("");
+  const [tipoEnvia, setTipoEnvia] = useState("");
+
+
+  const [blackList, setBlackList] = useState(() => {
+    const storedValue = localStorage.getItem("blackList");
+    return storedValue ? JSON.parse(storedValue) : [];
+  });
+  const [transactions, setTransactions] = useState(() => {
+    const storedValue = localStorage.getItem("transactions");
+    return storedValue ? JSON.parse(storedValue) : {};
+  });
+  const [alerts, setAlerts] = useState(() => {
+    const storedValue = localStorage.getItem("alerts");
+    return storedValue ? JSON.parse(storedValue) : [];
+  });
 
   const formatDate = (date) => {
     const formattedDate = format(new Date(date), 'dd/MM/yyyy HH:mm:ss');
@@ -40,10 +62,32 @@ const ManagerComponent = ({ email }) => {
     setAlerts([
       {
         id: transactionData.id,
-        log: `${formatDate(new Date())} Correo enviado a ${email} por transaccion: Ref: ${transactionData.id} - Cuenta: ${transactionData.cuenta} - Nombre: ${transactionData.nombre} - Monto: ${transactionData.monto} - Tipo de alerta: ${tipo}`,
+        log: `${formatDate(new Date())} Correo enviado a ${email} por transaccion: Ref: ${transactionData.id} \
+             - Cuenta de destino: ${transactionData.cuenta} - Cuenta de origen: ${transactionData.cuentaEnvia} \
+             - transferencia a favor de: ${transactionData.nombre} - por parte de: ${transactionData.nombreEnvia} \
+             - Monto: ${transactionData.monto} - Tipo de alerta: ${tipo}`,
       },
       ...alerts,
     ]);
+
+    const templateParams = {
+      ...transactionData,
+      to_email: email,
+      alertType: tipo,
+      dateTime: formatDate(transactionData.dateTime),
+    };
+
+    emailjs
+    .send("bvaalerts24", "bavtemplate24", templateParams, {
+      publicKey: "lYLvpucmUn11De82N",
+    })
+    .then(() => {
+      console.log("SUCCESS! enviado a: ", email);
+    },
+    (error) => {
+      console.log("FAILED...", error.text);
+    }
+  );
   };
 
   const addBlackList = (account) => {
@@ -58,31 +102,25 @@ const ManagerComponent = ({ email }) => {
   const handleMontoChange = (e) => {
     let inputMonto = e.target.value;
 
-    // Remover caracteres no numéricos excepto el punto decimal
     inputMonto = inputMonto.replace(/[^0-9.]/g, "");
 
-    // Verificar si el número tiene más de dos decimales
     const decimalCount = inputMonto.split(".")[1]
       ? inputMonto.split(".")[1].length
       : 0;
 
     if (decimalCount > 2) {
-      // Si tiene más de dos decimales, truncar el exceso
       inputMonto = parseFloat(inputMonto).toFixed(2);
     }
 
-    // Verificar si el número es negativo
     if (parseFloat(inputMonto) < 0) {
-      // Si es negativo, establecerlo como 0
       inputMonto = "0.00";
     }
 
-    // Actualizar el estado monto
     setMonto(inputMonto);
   };
 
-  const handleTransaction = (cuenta, nombre, cedula, monto, tipo) => {
-    if ([cuenta, nombre, cedula, monto, tipo].some((value) => value === "")) {
+  const handleTransaction = (cuenta, cuentaEnvia, nombreEnvia, cedulaEnvia, tipoEnvia, nombre, cedula, monto, tipo) => {
+    if ([cuenta, nombre, cedula, monto, tipo, nombreEnvia, cedulaEnvia, tipoEnvia].some((value) => value === "")) {
       return;
     }
 
@@ -94,6 +132,10 @@ const ManagerComponent = ({ email }) => {
       cedula,
       monto,
       tipo,
+      cuentaEnvia,
+      nombreEnvia,
+      cedulaEnvia,
+      tipoEnvia,
     };
 
     if (!transactions[cuenta]) {
@@ -106,7 +148,7 @@ const ManagerComponent = ({ email }) => {
       transactions[cuenta].count++;
     }
 
-    if (!blackList.includes(cuenta)) {
+    if (!blackList.includes(cuenta) && !blackList.includes(cuentaEnvia)) {
       if (parseFloat(monto) > mountAlertValue && tipo === "natural") {
         sendEmail({ ...newTransaction }, "Superó limite de monto");
       }
@@ -126,6 +168,10 @@ const ManagerComponent = ({ email }) => {
     setNombre("");
     setCedula("");
     setTipo("");
+    setCuentaEnvia("");
+    setNombreEnvia("");
+    setCedulaEnvia("");
+    setTipoEnvia("");
     setMonto(0);
   };
 
@@ -161,10 +207,58 @@ const ManagerComponent = ({ email }) => {
     const monto = Math.floor(Math.random() * 1000) + 1;
     const tipo = Math.random() > 0.5 ? "natural" : "empresa";
     const cuenta = Math.floor(Math.random() * 1000000000) + 1;
-    handleTransaction(cuenta, nombre, cedula, monto, tipo);
+    const cuentaEnvia = Math.floor(Math.random() * 1000000000) + 1;
+    const nombreEnvia = genRnadomNombre();
+    const cedulaEnvia = Math.floor(Math.random() * (25000000 - 10000000 + 1)) + 10000000;
+    const tipoEnvia = Math.random() > 0.5 ? "natural" : "empresa";
+    handleTransaction(cuenta, cuentaEnvia, nombreEnvia, cedulaEnvia, tipoEnvia, nombre, cedula, monto, tipo);
   }
 
-  console.log(transactions);
+  const handleDelLocalStorage = () => {
+    localStorage.clear();
+    setMountAlertValue(400);
+    setAccountCountAlertValue(20);
+    setBlackList([]);
+    setTransactions({});
+    setAlerts([]);
+  }
+
+  const handleLogOut = () => {
+    setEmail("");
+    localStorage.setItem("email", "");
+  }
+
+    useEffect(() => {
+      localStorage.setItem("mountAlertValue", mountAlertValue);
+      localStorage.setItem("accountCountAlertValue", accountCountAlertValue);
+      localStorage.setItem("blackList", JSON.stringify(blackList));
+      localStorage.setItem("transactions", JSON.stringify(transactions));
+      localStorage.setItem("alerts", JSON.stringify(alerts));
+    }, [mountAlertValue, accountCountAlertValue, blackList, transactions, alerts]);
+
+    useEffect(() => {
+      const storedMountAlertValue = localStorage.getItem("mountAlertValue");
+      const storedAccountCountAlertValue = localStorage.getItem("accountCountAlertValue");
+      const storedBlackList = localStorage.getItem("blackList");
+      const storedTransactions = localStorage.getItem("transactions");
+      const storedAlerts = localStorage.getItem("alerts");
+  
+      if (storedMountAlertValue) {
+        setMountAlertValue(JSON.parse(storedMountAlertValue));
+      }
+      if (storedAccountCountAlertValue) {
+        setAccountCountAlertValue(JSON.parse(storedAccountCountAlertValue));
+      }
+      if (storedBlackList) {
+        setBlackList(JSON.parse(storedBlackList));
+      }
+      if (storedTransactions) {
+        setTransactions(JSON.parse(storedTransactions));
+      }
+      if (storedAlerts) {
+        setAlerts(JSON.parse(storedAlerts));
+      }
+    }, []);
 
   return (
     <>
@@ -272,6 +366,8 @@ const ManagerComponent = ({ email }) => {
                   </div>
                 ))}
               </div>
+              <Button variant="contained" color="warning" className="w-full" sx={{my: "10px"}} onClick={handleLogOut}>Cerrar sesión</Button>
+              <Button variant="contained" color="error" className="w-full" onClick={handleDelLocalStorage}>Reiniciar base de datos</Button>
             </div>
           </div>
         </div>
@@ -339,6 +435,64 @@ const ManagerComponent = ({ email }) => {
                     </Select>
                   </FormControl>
                 </div>
+                <FormControl variant="standard" className="w-full">
+                  <FormHelperText id="standard-weight-helper-text">
+                    Numero de cuenta de quien envia
+                  </FormHelperText>
+                  <TextField
+                    type="text"
+                    placeholder="Numero de cuenta"
+                    variant="outlined"
+                    size="small"
+                    value={cuentaEnvia}
+                    onChange={(e) => setCuentaEnvia(e.target.value)}
+                  />
+                </FormControl>
+                <div className="flex justify-between items-center gap-2">
+                  <FormControl variant="standard" className="w-full">
+                    <FormHelperText id="standard-weight-helper-text">
+                      Nombre de quien envia
+                    </FormHelperText>
+                    <TextField
+                      type="text"
+                      placeholder="Nombre"
+                      variant="outlined"
+                      size="small"
+                      value={nombreEnvia}
+                      onChange={(e) => setNombreEnvia(e.target.value)}
+                    />
+                  </FormControl>
+                  <FormControl variant="standard" className="w-full">
+                    <FormHelperText id="standard-weight-helper-text">
+                      Cedula de quien envia
+                    </FormHelperText>
+                    <TextField
+                      type="text"
+                      placeholder="Cedula"
+                      variant="outlined"
+                      size="small"
+                      value={cedulaEnvia}
+                      onChange={(e) => setCedulaEnvia(e.target.value)}
+                    />
+                  </FormControl>
+                  <FormControl variant="outlined" className="w-full">
+                    <FormHelperText sx={{ m: "0px" }}>
+                      Tipo de cuenta de quien envia
+                    </FormHelperText>
+
+                    <Select
+                      labelId="demo-simple-select-label"
+                      id="demo-simple-select"
+                      label="Age"
+                      size="small"
+                      value={tipoEnvia}
+                      onChange={(e) => setTipoEnvia(e.target.value)}
+                    >
+                      <MenuItem value={"natural"}>Natural</MenuItem>
+                      <MenuItem value={"empreza"}>Empresa</MenuItem>
+                    </Select>
+                  </FormControl>
+                </div>
                 <div className="flex justify-between items-end">
                   <FormControl variant="standard" className="w-[250px]">
                     <FormHelperText id="standard-weight-helper-text">
@@ -393,16 +547,7 @@ const ManagerComponent = ({ email }) => {
 
 ManagerComponent.propTypes = {
   email: PropTypes.string,
+  setEmail: PropTypes.func,
 };
 
 export default ManagerComponent;
-
-// Inputs necesarios
-// Numero de cuenta
-// Nombre de propietario de la cuenta
-// Monto
-// Nombre de quien envia
-// Cedula de quien envia
-// Tipo de persona (natural/empresa)
-// Numero de referencia - SE GENERA AUTOMATICAMENTE
-// Fecha y hora - SE GENERA AUTOMATICAMENTE

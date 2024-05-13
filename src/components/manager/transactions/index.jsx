@@ -19,7 +19,7 @@ const TransactionList = ({ transactions }) => {
         {sortedAccounts.map((account) => (
           transactions[account].transacciones.map((transaction, index) => (
             <p key={index} className="text-gray-600 border-b border-black">
-              Fecha: {formatDate(transaction.dateTime)} - Ref: {transaction.id} - Nombre: {transaction.nombre} - Cedula: {transaction.cedula} - Monto: {transaction.monto}$ - Tipo: {transaction.tipo}
+              Fecha: {formatDate(transaction.dateTime)} - Ref: {transaction.id} - Cuenta destino: {transaction.cuenta} - Cuenta origen: {transaction.cuentaEnvia} - Nombre quien envia: {transaction.nombreEnvia} - Nombre quien recibe: {transaction.nombre} - Cedula de quien envia: {transaction.cedulaEnvia} - Cedula de quien recibe: {transaction.cedula} - Monto: {transaction.monto}$ - Tipo de cuenta origen: {transaction.tipoEnvia} - Tipo de cuenta de quien recibe: {transaction.tipo}
             </p>
           ))
         ))}

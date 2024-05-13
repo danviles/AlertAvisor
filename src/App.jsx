@@ -1,9 +1,20 @@
 import LoginComponent from "./components/login";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ManagerComponent from "./components/manager/index";
 
 function App() {
-  const [email, setEmail] = useState("");
+
+  const [email, setEmail] = useState(() => {
+    const storedValue = localStorage.getItem("email");
+    return storedValue !== null ? storedValue : "";
+  });
+
+  useEffect(() => {
+    if (email !== "") {
+      localStorage.setItem("email", email);
+    }
+  }, [email]);
+
 
   return (
     <section className="">
@@ -13,7 +24,7 @@ function App() {
         </div>
       ) : (
         <div className="h-screen">
-          <ManagerComponent email={email} />
+          <ManagerComponent email={email} setEmail={setEmail}/>
         </div>
       )}
     </section>
