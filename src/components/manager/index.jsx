@@ -1,4 +1,5 @@
 import logo1 from "@/images/logo1.png";
+import PropTypes from "prop-types";
 import FormControl from "@mui/material/FormControl";
 import FormHelperText from "@mui/material/FormHelperText";
 import InputAdornment from "@mui/material/InputAdornment";
@@ -11,10 +12,115 @@ import MenuItem from "@mui/material/MenuItem";
 import InputLabel from "@mui/material/InputLabel";
 import { useState } from "react";
 import TransactionList from "./transactions";
+import { genId } from "../../helpers/genId";
 
-const ManagerComponent = () => {
+const ManagerComponent = ({ email }) => {
   const [mountAlertValue, setMountAlertValue] = useState(400);
+  const [accountCountAlertValue, setAccountCountAlertValue] = useState(20);
+  const [blackListValue, setBlackListValue] = useState("");
+  
+  const [cuenta, setCuenta] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [cedula, setCedula] = useState("");
+  const [tipo, setTipo] = useState("");
+  const [monto, setMonto] = useState(0);
+
+
+  const [blackList, setBlackList] = useState([]);
   const [transactions, setTransactions] = useState({});
+  const [alerts, setAlerts] = useState([]);
+
+
+  const sendEmail = (transactionData, tipo) => {
+    setAlerts([
+      ...alerts,
+      {
+        id: transactionData.id,
+        log: `Correo enviado a ${email} por transaccion: Ref: ${transactionData.id} - Cuenta: ${transactionData.cuenta} - Nombre: ${transactionData.nombre} - Monto: ${transactionData.monto} - Tipo de alerta: ${tipo}`,
+      },
+    ]);
+  };
+
+  const addBlackList = (account) => {
+    if (blackList.includes(account) || account === "") {
+      setBlackListValue("");
+      return;
+    }
+    setBlackList([...blackList, account]);
+    setBlackListValue("");
+  };
+
+  const handleMontoChange = (e) => {
+    let inputMonto = e.target.value;
+
+    // Remover caracteres no numéricos excepto el punto decimal
+    inputMonto = inputMonto.replace(/[^0-9.]/g, '');
+
+    // Verificar si el número tiene más de dos decimales
+    const decimalCount = inputMonto.split('.')[1] ? inputMonto.split('.')[1].length : 0;
+
+    if (decimalCount > 2) {
+      // Si tiene más de dos decimales, truncar el exceso
+      inputMonto = parseFloat(inputMonto).toFixed(2);
+    }
+
+    // Verificar si el número es negativo
+    if (parseFloat(inputMonto) < 0) {
+      // Si es negativo, establecerlo como 0
+      inputMonto = '0.00';
+    }
+
+    // Actualizar el estado monto
+    setMonto(inputMonto);
+  };
+
+  const handleTransaction = () => {
+
+    if([cuenta, nombre, cedula, monto, tipo].some(value => value === "")) {
+      return;
+    }
+
+    const newTransaction = {
+      id: genId(),
+      dateTime: new Date().toISOString(),
+      cuenta,
+      nombre,
+      cedula,
+      monto,
+      tipo,
+    }
+
+    if(!transactions[cuenta]) {
+      transactions[cuenta] = {
+        transacciones: [{...newTransaction}],
+        count: 1
+      };
+    } else {
+      transactions[cuenta].transacciones.push({...newTransaction});
+      transactions[cuenta].count++;
+    }
+
+    if (!blackList.includes(cuenta)) {
+      if (parseFloat(monto) > mountAlertValue && tipo === "natural") {
+        sendEmail({ ...newTransaction }, "Sobrepaso limite de monto");
+      }
+      if (transactions[cuenta].count > accountCountAlertValue) {
+        transactions[cuenta].count = 0;
+        sendEmail({ ...newTransaction }, "Sobrepaso limite diario de transacciones");
+      }
+    } else {
+      sendEmail({ ...newTransaction }, "Pertenece a lista negra");
+    }
+
+    setTransactions({...transactions});
+    setCuenta("");
+    setNombre("");
+    setCedula("");
+    setTipo("");
+    setMonto(0);
+  };
+
+  console.log(transactions);
 
   return (
     <>
@@ -41,6 +147,8 @@ const ManagerComponent = () => {
                     placeholder="500"
                     variant="outlined"
                     size="small"
+                    value={mountAlertValue}
+                    onChange={(e) => setMountAlertValue(e.target.value)}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="start">
@@ -62,6 +170,8 @@ const ManagerComponent = () => {
                     placeholder="20"
                     variant="outlined"
                     size="small"
+                    value={accountCountAlertValue}
+                    onChange={(e) => setAccountCountAlertValue(e.target.value)}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="start">
@@ -94,23 +204,25 @@ const ManagerComponent = () => {
                     placeholder="Numero de cuenta"
                     variant="outlined"
                     size="small"
+                    value={blackListValue}
+                    onChange={(e) => setBlackListValue(e.target.value)}
                   />
                 </FormControl>
-                <Button>Agregar</Button>
+                <Button onClick={() => addBlackList(blackListValue)}>Agregar</Button>
               </div>
               <div className="flex flex-col mt-4 border rounded-md p-2 max-h-44 overflow-auto">
-                <div className="flex justify-between">
-                  <p>1234567890</p>
-                  <Button>X</Button>
-                </div>
-                <div className="flex justify-between">
-                  <p>1234567890</p>
-                  <Button>X</Button>
-                </div>
-                <div className="flex justify-between">
-                  <p>1234567890</p>
-                  <Button>X</Button>
-                </div>
+                {blackList.map((account, i) => (
+                  <div className="flex justify-between" key={account + -+i}>
+                    <p>{account}</p>
+                    <Button
+                      onClick={() => {
+                        setBlackList(blackList.filter((acc) => acc !== account));
+                      }}
+                    >
+                      X
+                    </Button>
+                   </div>
+                ))}
               </div>
             </div>
           </div>
@@ -130,6 +242,8 @@ const ManagerComponent = () => {
                     placeholder="Numero de cuenta"
                     variant="outlined"
                     size="small"
+                    value={cuenta}
+                    onChange={(e) => setCuenta(e.target.value)}
                   />
                 </FormControl>
                 <div className="flex justify-between items-center gap-2">
@@ -142,6 +256,8 @@ const ManagerComponent = () => {
                       placeholder="Nombre"
                       variant="outlined"
                       size="small"
+                      value={nombre}
+                      onChange={(e) => setNombre(e.target.value)}
                     />
                   </FormControl>
                   <FormControl variant="standard" className="w-full">
@@ -153,6 +269,8 @@ const ManagerComponent = () => {
                       placeholder="Cedula"
                       variant="outlined"
                       size="small"
+                      value={cedula}
+                      onChange={(e) => setCedula(e.target.value)}
                     />
                   </FormControl>
                   <FormControl variant="outlined" className="w-full">
@@ -165,6 +283,8 @@ const ManagerComponent = () => {
                       id="demo-simple-select"
                       label="Age"
                       size="small"
+                      value={tipo}
+                      onChange={(e) => setTipo(e.target.value)}
                     >
                       <MenuItem value={"natural"}>Natural</MenuItem>
                       <MenuItem value={"empreza"}>Empresa</MenuItem>
@@ -181,9 +301,11 @@ const ManagerComponent = () => {
                       placeholder="Monto"
                       variant="outlined"
                       size="small"
+                      value={monto}
+                      onChange={handleMontoChange}
                     />
                   </FormControl>
-                  <Button>Crear transferencia</Button>
+                  <Button onClick={handleTransaction}>Crear transferencia</Button>
                 </div>
               </div>
               <div className="flex flex-col justify-between items-center w-6/12 border rounded-lg p-5">
@@ -204,12 +326,20 @@ const ManagerComponent = () => {
           {/* LOGS DE ALERTAS */}
           <div className="border rounded-lg p-5 mt-5 h-[200px] overflow-auto">
             <h2>Alertas creadas</h2>
-            <TransactionList transactions={transactions} />
+            <div className="flex flex-col gap-2">
+              {alerts.map((alert) => (
+                <p key={alert.id}>{alert.log}</p>
+              ))}
+            </div>
           </div>
         </div>
       </div>
     </>
   );
+};
+
+ManagerComponent.propTypes = {
+  email: PropTypes.string,
 };
 
 export default ManagerComponent;
