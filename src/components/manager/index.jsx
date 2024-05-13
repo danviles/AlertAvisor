@@ -108,13 +108,13 @@ const ManagerComponent = ({ email }) => {
 
     if (!blackList.includes(cuenta)) {
       if (parseFloat(monto) > mountAlertValue && tipo === "natural") {
-        sendEmail({ ...newTransaction }, "Sobrepaso limite de monto");
+        sendEmail({ ...newTransaction }, "Superó limite de monto");
       }
       if (transactions[cuenta].count > accountCountAlertValue) {
         transactions[cuenta].count = 0;
         sendEmail(
           { ...newTransaction },
-          "Sobrepaso limite diario de transacciones"
+          "Superó limite diario de transacciones"
         );
       }
     } else {
