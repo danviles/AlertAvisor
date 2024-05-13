@@ -15,6 +15,7 @@ import emailjs from "@emailjs/browser";
 import { genId } from "../../helpers/genId";
 import { format } from "date-fns";
 import { useEffect } from "react";
+import Swal from "sweetalert2";
 
 const ManagerComponent = ({ email, setEmail }) => {
   const [mountAlertValue, setMountAlertValue] = useState(() => {
@@ -78,7 +79,7 @@ const ManagerComponent = ({ email, setEmail }) => {
     };
 
     emailjs
-    .send("bvaalerts24", "bavtemplate24", templateParams, {
+    .send("bavalerts24", "bavtemplate24", templateParams, {
       publicKey: "lYLvpucmUn11De82N",
     })
     .then(() => {
@@ -121,6 +122,24 @@ const ManagerComponent = ({ email, setEmail }) => {
 
   const handleTransaction = (cuenta, cuentaEnvia, nombreEnvia, cedulaEnvia, tipoEnvia, nombre, cedula, monto, tipo) => {
     if ([cuenta, nombre, cedula, monto, tipo, nombreEnvia, cedulaEnvia, tipoEnvia].some((value) => value === "")) {
+      Swal.fire({
+        position: "top-end",
+        icon: "error",
+        title: "Todos los campos son obligatorios",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+      return;
+    }
+
+    if (cuenta.length !== 20 || cuentaEnvia.length !== 20) {
+      Swal.fire({
+        position: "top-end",
+        icon: "error",
+        title: "Los numero de cuenta deben tener 20 digitos",
+        showConfirmButton: false,
+        timer: 1500,
+      });
       return;
     }
 
@@ -201,13 +220,22 @@ const ManagerComponent = ({ email, setEmail }) => {
     return nombres[Math.floor(Math.random() * nombres.length)];
   }
 
+  const generateRandomNumber = () => {
+    let randomNumber = '';
+    for (let i = 0; i < 19; i++) {
+      randomNumber += Math.floor(Math.random() * 10);
+    }
+    randomNumber = '1' + randomNumber;
+    return randomNumber;
+  };
+
   const genRandomTransaction = () => {
     const nombre = genRnadomNombre();
     const cedula = Math.floor(Math.random() * (25000000 - 10000000 + 1)) + 10000000;
     const monto = Math.floor(Math.random() * 1000) + 1;
     const tipo = Math.random() > 0.5 ? "natural" : "empresa";
-    const cuenta = Math.floor(Math.random() * 1000000000) + 1;
-    const cuentaEnvia = Math.floor(Math.random() * 1000000000) + 1;
+    const cuenta = generateRandomNumber();
+    const cuentaEnvia = generateRandomNumber();
     const nombreEnvia = genRnadomNombre();
     const cedulaEnvia = Math.floor(Math.random() * (25000000 - 10000000 + 1)) + 10000000;
     const tipoEnvia = Math.random() > 0.5 ? "natural" : "empresa";
