@@ -6,10 +6,12 @@ import TextField from '@mui/material/TextField';
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import InputAdornment from "@mui/material/InputAdornment";
 import EmailIcon from "@mui/icons-material/Email";
+import KeyIcon from '@mui/icons-material/Key';
 import Swal from "sweetalert2";
 
 const LoginComponent = ({ setEmail }) => {
   const [email_input, setEmailInput] = useState("");
+  const [password_input, setPasswordInput] = useState("");
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -50,6 +52,20 @@ const LoginComponent = ({ setEmail }) => {
             endAdornment: (
               <InputAdornment position="start">
                 <EmailIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <TextField
+          type="password"
+          value={password_input}
+          onChange={(e) => setPasswordInput(e.target.value)}
+          variant="outlined"
+          InputProps={{
+            sx: { bgcolor: "white", borderRadius: "4px", border: "0px" },
+            endAdornment: (
+              <InputAdornment position="start">
+                <KeyIcon />
               </InputAdornment>
             ),
           }}

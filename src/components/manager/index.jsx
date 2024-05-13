@@ -13,31 +13,36 @@ import InputLabel from "@mui/material/InputLabel";
 import { useState } from "react";
 import TransactionList from "./transactions";
 import { genId } from "../../helpers/genId";
+import { format } from "date-fns";
 
 const ManagerComponent = ({ email }) => {
   const [mountAlertValue, setMountAlertValue] = useState(400);
   const [accountCountAlertValue, setAccountCountAlertValue] = useState(20);
   const [blackListValue, setBlackListValue] = useState("");
-  
+
   const [cuenta, setCuenta] = useState("");
   const [nombre, setNombre] = useState("");
   const [cedula, setCedula] = useState("");
   const [tipo, setTipo] = useState("");
   const [monto, setMonto] = useState(0);
 
-
   const [blackList, setBlackList] = useState([]);
   const [transactions, setTransactions] = useState({});
   const [alerts, setAlerts] = useState([]);
 
+  const formatDate = (date) => {
+    const formattedDate = format(new Date(date), 'dd/MM/yyyy HH:mm:ss');
+    return formattedDate;
+  }
 
   const sendEmail = (transactionData, tipo) => {
+
     setAlerts([
-      ...alerts,
       {
         id: transactionData.id,
-        log: `Correo enviado a ${email} por transaccion: Ref: ${transactionData.id} - Cuenta: ${transactionData.cuenta} - Nombre: ${transactionData.nombre} - Monto: ${transactionData.monto} - Tipo de alerta: ${tipo}`,
+        log: `${formatDate(new Date())} Correo enviado a ${email} por transaccion: Ref: ${transactionData.id} - Cuenta: ${transactionData.cuenta} - Nombre: ${transactionData.nombre} - Monto: ${transactionData.monto} - Tipo de alerta: ${tipo}`,
       },
+      ...alerts,
     ]);
   };
 
@@ -54,10 +59,12 @@ const ManagerComponent = ({ email }) => {
     let inputMonto = e.target.value;
 
     // Remover caracteres no numéricos excepto el punto decimal
-    inputMonto = inputMonto.replace(/[^0-9.]/g, '');
+    inputMonto = inputMonto.replace(/[^0-9.]/g, "");
 
     // Verificar si el número tiene más de dos decimales
-    const decimalCount = inputMonto.split('.')[1] ? inputMonto.split('.')[1].length : 0;
+    const decimalCount = inputMonto.split(".")[1]
+      ? inputMonto.split(".")[1].length
+      : 0;
 
     if (decimalCount > 2) {
       // Si tiene más de dos decimales, truncar el exceso
@@ -67,16 +74,15 @@ const ManagerComponent = ({ email }) => {
     // Verificar si el número es negativo
     if (parseFloat(inputMonto) < 0) {
       // Si es negativo, establecerlo como 0
-      inputMonto = '0.00';
+      inputMonto = "0.00";
     }
 
     // Actualizar el estado monto
     setMonto(inputMonto);
   };
 
-  const handleTransaction = () => {
-
-    if([cuenta, nombre, cedula, monto, tipo].some(value => value === "")) {
+  const handleTransaction = (cuenta, nombre, cedula, monto, tipo) => {
+    if ([cuenta, nombre, cedula, monto, tipo].some((value) => value === "")) {
       return;
     }
 
@@ -88,15 +94,15 @@ const ManagerComponent = ({ email }) => {
       cedula,
       monto,
       tipo,
-    }
+    };
 
-    if(!transactions[cuenta]) {
+    if (!transactions[cuenta]) {
       transactions[cuenta] = {
-        transacciones: [{...newTransaction}],
-        count: 1
+        transacciones: [{ ...newTransaction }],
+        count: 1,
       };
     } else {
-      transactions[cuenta].transacciones.push({...newTransaction});
+      transactions[cuenta].transacciones.push({ ...newTransaction });
       transactions[cuenta].count++;
     }
 
@@ -106,19 +112,57 @@ const ManagerComponent = ({ email }) => {
       }
       if (transactions[cuenta].count > accountCountAlertValue) {
         transactions[cuenta].count = 0;
-        sendEmail({ ...newTransaction }, "Sobrepaso limite diario de transacciones");
+        sendEmail(
+          { ...newTransaction },
+          "Sobrepaso limite diario de transacciones"
+        );
       }
     } else {
       sendEmail({ ...newTransaction }, "Pertenece a lista negra");
     }
 
-    setTransactions({...transactions});
+    setTransactions({ ...transactions });
     setCuenta("");
     setNombre("");
     setCedula("");
     setTipo("");
     setMonto(0);
   };
+
+  const genRnadomNombre = () => {
+    const nombres = [
+      "Juan",
+      "Pedro",
+      "Maria",
+      "Jose",
+      "Luis",
+      "Ana",
+      "Carlos",
+      "Rosa",
+      "Luisa",
+      "Jorge",
+      "Fernando",
+      "Carmen",
+      "Sofia",
+      "Andres",
+      "Miguel",
+      "Antonio",
+      "Laura",
+      "Diana",
+      "Dario",
+      "Camilo",
+    ];
+    return nombres[Math.floor(Math.random() * nombres.length)];
+  }
+
+  const genRandomTransaction = () => {
+    const nombre = genRnadomNombre();
+    const cedula = Math.floor(Math.random() * (25000000 - 10000000 + 1)) + 10000000;
+    const monto = Math.floor(Math.random() * 1000000) + 1;
+    const tipo = Math.random() > 0.5 ? "natural" : "empresa";
+    const cuenta = Math.floor(Math.random() * 1000000000) + 1;
+    handleTransaction(cuenta, nombre, cedula, monto, tipo);
+  }
 
   console.log(transactions);
 
@@ -208,7 +252,9 @@ const ManagerComponent = ({ email }) => {
                     onChange={(e) => setBlackListValue(e.target.value)}
                   />
                 </FormControl>
-                <Button onClick={() => addBlackList(blackListValue)}>Agregar</Button>
+                <Button onClick={() => addBlackList(blackListValue)}>
+                  Agregar
+                </Button>
               </div>
               <div className="flex flex-col mt-4 border rounded-md p-2 max-h-44 overflow-auto">
                 {blackList.map((account, i) => (
@@ -216,12 +262,14 @@ const ManagerComponent = ({ email }) => {
                     <p>{account}</p>
                     <Button
                       onClick={() => {
-                        setBlackList(blackList.filter((acc) => acc !== account));
+                        setBlackList(
+                          blackList.filter((acc) => acc !== account)
+                        );
                       }}
                     >
                       X
                     </Button>
-                   </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -305,16 +353,21 @@ const ManagerComponent = ({ email }) => {
                       onChange={handleMontoChange}
                     />
                   </FormControl>
-                  <Button onClick={handleTransaction}>Crear transferencia</Button>
+                  <Button onClick={() => handleTransaction(cuenta, nombre, cedula, monto, tipo)}>
+                    Crear transferencia
+                  </Button>
                 </div>
               </div>
               <div className="flex flex-col justify-between items-center w-6/12 border rounded-lg p-5">
                 <p>
                   {
-                    "El siguiente boton crea una transferencia con datos ficticios a modo de simular a bajo nivel un trafico de transacciones, el sistema generara una alerta automaticamente una vez se detecte cualquier transaccione que cumpla con las condiciones del panel de configuracion"
+                    "El siguiente botón genera una transferencia con datos ficticios con el fin \
+                    de simular a bajo nivel un tráfico de transacciones. El sistema generará \
+                    automáticamente una alerta en cuanto detecte cualquier transacción que \
+                    cumpla con las condiciones establecidas en el panel de configuración."
                   }
                 </p>
-                <Button>Crear transferencia</Button>
+                <Button onClick={genRandomTransaction}>Crear transferencia</Button>
               </div>
             </div>
           </div>
@@ -328,7 +381,7 @@ const ManagerComponent = ({ email }) => {
             <h2>Alertas creadas</h2>
             <div className="flex flex-col gap-2">
               {alerts.map((alert) => (
-                <p key={alert.id}>{alert.log}</p>
+                <p key={alert.id} className="text-gray-600 border-b border-black">{alert.log}</p>
               ))}
             </div>
           </div>
