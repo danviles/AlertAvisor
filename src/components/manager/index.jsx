@@ -158,7 +158,7 @@ const ManagerComponent = ({ email }) => {
   const genRandomTransaction = () => {
     const nombre = genRnadomNombre();
     const cedula = Math.floor(Math.random() * (25000000 - 10000000 + 1)) + 10000000;
-    const monto = Math.floor(Math.random() * 1000000) + 1;
+    const monto = Math.floor(Math.random() * 1000) + 1;
     const tipo = Math.random() > 0.5 ? "natural" : "empresa";
     const cuenta = Math.floor(Math.random() * 1000000000) + 1;
     handleTransaction(cuenta, nombre, cedula, monto, tipo);
