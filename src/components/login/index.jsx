@@ -59,6 +59,7 @@ const LoginComponent = ({ setEmail }) => {
         <TextField
           type="password"
           value={password_input}
+          placeholder="Contraseña"
           onChange={(e) => setPasswordInput(e.target.value)}
           variant="outlined"
           InputProps={{
